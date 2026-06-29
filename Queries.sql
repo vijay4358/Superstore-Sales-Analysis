@@ -1,111 +1,259 @@
-use superstore;
-describe store;
-show columns from store;
+/*====================================================================
+                    SUPERSTORE SALES & PROFIT ANALYSIS
+                            SQL ANALYSIS
+----------------------------------------------------------------------
+Author      : Vijay Vishwakarma
+Database    : Superstore
+Tools        : MySQL
+Description : SQL queries used for business analysis and KPI generation
+====================================================================*/
 
-select * from store 
-where Category = 'Furniture'
-limit 5;
+USE superstore;
 
-select round(sum(Sales),2) as total_sales from store;
-select round(sum(Profit),2) as total_profit from store;
-select count(distinct `Customer ID`) as total_customers from store;
-select count(distinct `Order ID`) as total_orders from store;	
-select count(distinct `Product ID`) as total_products from store;
-select round(sum(`Sales`)/count(distinct `Order ID`),2) as avg_order_value from store;
+/*====================================================================
+SECTION 1 : DATABASE EXPLORATION
+====================================================================*/
+
+-- View table structure
+
+DESCRIBE store;
+
+------------------------------------------------------------
+
+-- Display all column names
+
+SHOW COLUMNS FROM store;
+
+------------------------------------------------------------
+
+-- Preview Furniture records
+
+SELECT *
+FROM store
+WHERE Category = 'Furniture'
+LIMIT 5;
 
 
-select Category, round(sum(Sales),2) as 'Total_Sales'
+/*====================================================================
+SECTION 2 : KPI ANALYSIS
+====================================================================*/
 
-from store;
+-- Total Sales
+
+SELECT ROUND(SUM(Sales),2) AS Total_Sales
+FROM store;
+
+------------------------------------------------------------
+
+-- Total Profit
+
+SELECT ROUND(SUM(Profit),2) AS Total_Profit
+FROM store;
+
+------------------------------------------------------------
+
+-- Total Customers
+
+SELECT COUNT(DISTINCT `Customer ID`) AS Total_Customers
+FROM store;
+
+------------------------------------------------------------
+
+-- Total Orders
+
+SELECT COUNT(DISTINCT `Order ID`) AS Total_Orders
+FROM store;
+
+------------------------------------------------------------
+
+-- Total Products
+
+SELECT COUNT(DISTINCT `Product ID`) AS Total_Products
+FROM store;
+
+------------------------------------------------------------
+
+-- Average Order Value (AOV)
+
+SELECT ROUND(
+    SUM(Sales) / COUNT(DISTINCT `Order ID`),
+    2
+) AS Average_Order_Value
+FROM store;
 
 
-with cte as (
-select Category, round(sum(Sales),2) as Total_Sales, round(sum(Sales)*100/sum(sum(Sales)) over() ,2) as contro_pct
-from store
-group by Category
-order by Total_Sales desc)
-select * from cte;
+/*====================================================================
+SECTION 3 : CATEGORY ANALYSIS
+====================================================================*/
 
+-- Sales Contribution by Category
 
-select Category, sum(Profit) as Total_profit
-from store
-group by Category
-order by Total_Profit desc;
-
-with cte1 as 
-(select `Sub-Category`, sum(Profit) as total_profit
-from store
-where Category = 'Furniture'
-group by `Sub-Category`
-order by total_profit desc
-), 
-cte2 as
-(select `Sub-Category`, sum(Sales) as total_sales
-from store
-group by `Sub-Category`
-order by total_sales desc
+WITH Category_Sales AS
+(
+    SELECT
+        Category,
+        ROUND(SUM(Sales),2) AS Total_Sales,
+        ROUND(
+            SUM(Sales)*100 / SUM(SUM(Sales)) OVER(),
+            2
+        ) AS Contribution_Pct
+    FROM store
+    GROUP BY Category
 )
-select * from cte1,cte2;
 
+SELECT *
+FROM Category_Sales
+ORDER BY Total_Sales DESC;
 
-select  Discount, sum(Profit) as Total_Profit
-from store
-where Category = 'Furniture'
-group by Discount
-order by Discount;
+------------------------------------------------------------
 
-select `Sub-Category`, Discount*100 as discount_pct, Profit 
-from store
-where `Sub-Category` = 'Tables' or `Sub-Category` = 'Bookcases';
-
-
-select `Sub-Category`, sum(Profit) as Total_profit, avg(Discount)*100 as avg_discount
-from store 
-where Category = 'Furniture'
-group by `Sub-Category`
-order by Total_profit desc;
-
-select Region, sum(Sales) as Total_Sales
-from store
-group by Region
-order by Total_Sales ;
-
-select Region, sum(Profit) as Total_Profit
-from store
-group by Region
-order by Total_Profit ;
-
-select Region, round(sum(Sales), 2) as Total_Sales, 
-	   round(sum(Sales)*100 / sum(sum(Sales)) over(), 2) as Contribution_pct
-from store
-group by region
-order by Contribution_pct ;
-
-Select segment, sum(Sales) as total_sales
-from  store 
-group by segment
-order by total_Sales desc;
-
-Select segment, sum(Profit) as total_profit
-from  store 
-group by segment
-order by total_profit desc;
-
-select segment, 
-	   round(Sum(Sales), 2) as total_sales,
-       round(sum(Sales)*100 / sum(sum(Sales)) over() , 2) as contro_pct
-from store 
-group by segment
-order by contro_pct desc;
-
+-- Profit by Category
 
 SELECT
-    year(STR_TO_DATE(`Order Date`, '%m/%d/%Y')) as years,
-    round(sum(Sales),2) as total_sales
+    Category,
+    ROUND(SUM(Profit),2) AS Total_Profit
 FROM store
-group by years
-order by total_sales desc;
+GROUP BY Category
+ORDER BY Total_Profit DESC;
 
 
+/*====================================================================
+SECTION 4 : SUB-CATEGORY ANALYSIS
+====================================================================*/
 
+-- Furniture Sub-Category Profit
+
+SELECT
+    `Sub-Category`,
+    ROUND(SUM(Profit),2) AS Total_Profit,
+    ROUND(AVG(Discount)*100,2) AS Average_Discount
+FROM store
+WHERE Category='Furniture'
+GROUP BY `Sub-Category`
+ORDER BY Total_Profit DESC;
+
+------------------------------------------------------------
+
+-- Profit by Discount (Furniture)
+
+SELECT
+    Discount,
+    ROUND(SUM(Profit),2) AS Total_Profit
+FROM store
+WHERE Category='Furniture'
+GROUP BY Discount
+ORDER BY Discount;
+
+------------------------------------------------------------
+
+-- Discount Analysis for Loss-Making Products
+
+SELECT
+    `Sub-Category`,
+    Discount*100 AS Discount_Pct,
+    Profit
+FROM store
+WHERE `Sub-Category`
+IN ('Tables','Bookcases');
+
+
+/*====================================================================
+SECTION 5 : REGIONAL ANALYSIS
+====================================================================*/
+
+-- Sales by Region
+
+SELECT
+    Region,
+    ROUND(SUM(Sales),2) AS Total_Sales
+FROM store
+GROUP BY Region
+ORDER BY Total_Sales DESC;
+
+------------------------------------------------------------
+
+-- Profit by Region
+
+SELECT
+    Region,
+    ROUND(SUM(Profit),2) AS Total_Profit
+FROM store
+GROUP BY Region
+ORDER BY Total_Profit DESC;
+
+------------------------------------------------------------
+
+-- Regional Sales Contribution
+
+SELECT
+    Region,
+    ROUND(SUM(Sales),2) AS Total_Sales,
+    ROUND(
+        SUM(Sales)*100 / SUM(SUM(Sales)) OVER(),
+        2
+    ) AS Contribution_Pct
+FROM store
+GROUP BY Region
+ORDER BY Contribution_Pct DESC;
+
+
+/*====================================================================
+SECTION 6 : SEGMENT ANALYSIS
+====================================================================*/
+
+-- Sales by Segment
+
+SELECT
+    Segment,
+    ROUND(SUM(Sales),2) AS Total_Sales
+FROM store
+GROUP BY Segment
+ORDER BY Total_Sales DESC;
+
+------------------------------------------------------------
+
+-- Profit by Segment
+
+SELECT
+    Segment,
+    ROUND(SUM(Profit),2) AS Total_Profit
+FROM store
+GROUP BY Segment
+ORDER BY Total_Profit DESC;
+
+------------------------------------------------------------
+
+-- Segment Contribution
+
+SELECT
+    Segment,
+    ROUND(SUM(Sales),2) AS Total_Sales,
+    ROUND(
+        SUM(Sales)*100 / SUM(SUM(Sales)) OVER(),
+        2
+    ) AS Contribution_Pct
+FROM store
+GROUP BY Segment
+ORDER BY Contribution_Pct DESC;
+
+
+/*====================================================================
+SECTION 7 : TIME TREND ANALYSIS
+====================================================================*/
+
+-- Year-wise Sales Trend
+
+SELECT
+    YEAR(
+        STR_TO_DATE(`Order Date`, '%m/%d/%Y')
+    ) AS Order_Year,
+
+    ROUND(SUM(Sales),2) AS Total_Sales
+FROM store
+GROUP BY Order_Year
+ORDER BY Total_Sales DESC;
+
+/*====================================================================
+END OF SQL ANALYSIS
+====================================================================*/
 
